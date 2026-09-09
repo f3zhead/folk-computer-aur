@@ -1,0 +1,25 @@
+[Unit]
+Description=Folk service
+After=network.target getty@tty1.service
+Conflicts=getty@tty1.service
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=1
+User=folk
+WorkingDirectory=/opt/folk
+ExecStart=/opt/folk/folk
+
+TTYPath=/dev/tty1
+StandardInput=tty
+StandardOutput=tty
+StandardError=journal
+TTYReset=yes
+TTYVHangup=yes
+TTYVTDisallocate=yes
+PAMName=login
+
+[Install]
+WantedBy=multi-user.target

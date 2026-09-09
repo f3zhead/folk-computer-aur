@@ -1,0 +1,47 @@
+post_install() {
+    if ! getent passwd folk >/dev/null; then
+        useradd -r -m -d /opt/folk \
+            -G video,render,input,tty,lp \
+            -s /usr/bin/nologin folk
+        echo "==> Created system user 'folk' (groups: video,render,input,tty,lp)."
+    else
+        echo "==> User 'folk' already exists; group membership left unchanged."
+        echo "    If upgrading from an older install, verify groups manually:"
+        echo "      groups folk"
+    fi
+
+    chown -R folk:folk /opt/folk
+
+    cat <<'EOF'
+
+==> Before starting the service:
+    1. Edit /opt/folk/hosts.tcl to set a unique hostname (see upstream README).
+    2. Disable the getty on the console Folk will run on, e.g.:
+         systemctl disable --now getty@tty1.service
+    3. Enable and start:
+         systemctl enable --now folk.service
+    4. Follow logs with:
+         journalctl -u folk.service -f
+
+    NOTE: Direct-display Vulkan (VK_KHR_display) and console keyboard
+    handling (kbd_mode/dumpkeys) both require a REAL virtual console,
+    not a pty -- do not run this over SSH; the systemd unit's TTYPath
+    directive handles this, but manual testing must be done from the
+    physical console.
+
+    NOTE: If your GPU predates AMD GCN or is otherwise unsupported by
+    Mesa's Vulkan drivers (e.g. TeraScale/VLIW AMD parts), Folk's
+    Vulkan-based rendering will not run at all.
+EOF
+}
+
+post_upgrade() {
+    post_install
+}
+
+post_remove() {
+    if getent passwd folk >/dev/null; then
+        userdel folk 2>/dev/null || true
+        echo "==> Removed system user 'folk'. /opt/folk left in place -- remove manually if desired."
+    fi
+}
