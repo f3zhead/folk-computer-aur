@@ -15,7 +15,7 @@
 #   so the package ships the whole source tree, not just the binary.
 
 pkgname=folk-computer-git
-pkgver=r4397.61a19300
+pkgver=r1
 pkgrel=1
 pkgdesc="Physical computing system: reactive database, programming environment, projection mapping"
 arch=('x86_64' 'aarch64')
@@ -96,16 +96,18 @@ build() {
 }
 
 package() {
-    install -d "$pkgdir/opt/folk"
-    # Ship the whole tree: .folk programs are sourced from disk by
-    # relative path at runtime (builtin-programs/, virtual-programs/,
-    # test/, hosts.tcl, etc.), not compiled into the binary.
-    cp -r folk/* "$pkgdir/opt/folk/"
+    # Install a canonical, read-only reference copy under /usr/share
+    # rather than directly under /home -- pacman/namcap generally
+    # frown on package-managed files living under /home. The actual
+    # runtime copy that Folk reads/writes .folk files from gets synced
+    # into /home/folk/folk by post_install()/post_upgrade() below.
+    install -d "$pkgdir/usr/share/folk"
+    cp -r folk/* "$pkgdir/usr/share/folk/"
 
     # systemd unit -- includes the TTYPath/PAMName fixes worked out
     # for direct-console keyboard (kbd_mode/dumpkeys) + KMS/Vulkan
-    # direct-display access. Calls the built binary directly rather
-    # than `make start`, since that target's systemd-vs-interactive
+    # direct-display access. Calls the runtime binary directly rather
+    # than `make start` since that target's systemd-vs-interactive
     # self-detection is a developer-convenience shim, not needed once
     # packaged.
     install -Dm644 folk.service "$pkgdir/usr/lib/systemd/system/folk.service"

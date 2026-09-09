@@ -9,8 +9,8 @@ Type=simple
 Restart=always
 RestartSec=1
 User=folk
-WorkingDirectory=/opt/folk
-ExecStart=/opt/folk/folk
+WorkingDirectory=/home/folk/folk
+ExecStart=/home/folk/folk/folk
 
 TTYPath=/dev/tty1
 StandardInput=tty

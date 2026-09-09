@@ -1,6 +1,6 @@
 post_install() {
     if ! getent passwd folk >/dev/null; then
-        useradd -r -m -d /opt/folk \
+        useradd -r -m -d /home/folk \
             -G video,render,input,tty,lp \
             -s /usr/bin/nologin folk
         echo "==> Created system user 'folk' (groups: video,render,input,tty,lp)."
@@ -10,12 +10,23 @@ post_install() {
         echo "      groups folk"
     fi
 
-    chown -R folk:folk /opt/folk
+    # First install: plain full copy into the runtime directory.
+    if [ ! -e /home/folk/folk/folk ]; then
+        mkdir -p /home/folk/folk
+        cp -r /usr/share/folk/. /home/folk/folk/
+        echo "==> Copied Folk into /home/folk/folk."
+    else
+        echo "==> /home/folk/folk already has a runtime copy; skipping initial copy."
+        echo "    (This shouldn't normally happen on a fresh install -- if it does,"
+        echo "    you likely want to run the upgrade sync below manually instead.)"
+    fi
+
+    chown -R folk:folk /home/folk
 
     cat <<'EOF'
 
 ==> Before starting the service:
-    1. Edit /opt/folk/hosts.tcl to set a unique hostname (see upstream README).
+    1. Edit /home/folk/folk/hosts.tcl to set a unique hostname (see upstream README).
     2. Disable the getty on the console Folk will run on, e.g.:
          systemctl disable --now getty@tty1.service
     3. Enable and start:
@@ -36,12 +47,36 @@ EOF
 }
 
 post_upgrade() {
-    post_install
+    if ! getent passwd folk >/dev/null; then
+        post_install
+        return
+    fi
+
+    # Upgrade: sync new upstream code into the runtime directory, but
+    # preserve anything the user has generated/edited locally so an
+    # upgrade doesn't clobber their work. This exclude list is a best
+    # guess based on Folk's observed conventions (hosts.tcl identity,
+    # *.folk.edited live-editor overrides, generated calibration data)
+    # -- adjust it if you know of other runtime-generated state files
+    # (e.g. a saved-holds persistence file) that should also survive
+    # an upgrade.
+    rsync -a --delete \
+        --exclude 'hosts.tcl' \
+        --exclude '*.folk.edited' \
+        --exclude 'generated-calibration.tcl' \
+        --exclude 'folk.pid' \
+        /usr/share/folk/ /home/folk/folk/
+
+    chown -R folk:folk /home/folk/folk
+    echo "==> Synced upstream code into /home/folk/folk (preserved hosts.tcl,"
+    echo "    *.folk.edited overrides, and calibration data)."
+    echo "==> Restart the service to pick up the update:"
+    echo "      systemctl restart folk.service"
 }
 
 post_remove() {
     if getent passwd folk >/dev/null; then
         userdel folk 2>/dev/null || true
-        echo "==> Removed system user 'folk'. /opt/folk left in place -- remove manually if desired."
+        echo "==> Removed system user 'folk'. /home/folk/folk left in place -- remove manually if desired."
     fi
 }
