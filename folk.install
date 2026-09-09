@@ -65,6 +65,7 @@ post_upgrade() {
         --exclude '*.folk.edited' \
         --exclude 'generated-calibration.tcl' \
         --exclude 'folk.pid' \
+        --exclude 'user_programs/' \ 
         /usr/share/folk/ /home/folk/folk/
 
     chown -R folk:folk /home/folk/folk
